@@ -22,6 +22,9 @@ ball_dx, ball_dy = 5, 5
 score_left = 0
 score_right = 0
 
+paddle1_y = HEIGHT // 2
+paddle2_y = HEIGHT // 2
+
 # Initialize server
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((HOST, PORT))

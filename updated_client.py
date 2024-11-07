@@ -23,8 +23,6 @@ paddle2_y = HEIGHT // 2
 ball_x, ball_y = WIDTH // 2, HEIGHT // 2
 role = None
 game_started = False
-
-# Khởi tạo pygame
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Ping Pong Game")
