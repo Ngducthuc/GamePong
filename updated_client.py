@@ -2,6 +2,7 @@ import pygame
 import socket
 import pickle
 import threading
+
 # Thông tin server
 SERVER_IP = '192.168.100.234'
 SERVER_PORT = 5555
@@ -20,20 +21,24 @@ score_right = 0
 paddle1_y = HEIGHT // 2
 paddle2_y = HEIGHT // 2
 ball_x, ball_y = WIDTH // 2, HEIGHT // 2
-ball_dx, ball_dy = 5, 5
 role = None
 game_started = False
+
+# Khởi tạo pygame
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Ping Pong Game")
 clock = pygame.time.Clock()
+
 connected = False
 client_socket = None
+
 def connect_to_server():
     global client_socket, connected
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_IP, SERVER_PORT))
     connected = True
+
 def receive_data():
     global paddle1_y, paddle2_y, ball_x, ball_y, game_started, role, score_left, score_right
     while True:
@@ -49,10 +54,14 @@ def receive_data():
             paddle1_y = message["paddle1_y"]
         if "paddle2_y" in message:
             paddle2_y = message["paddle2_y"]
+        if "ball_x" in message and "ball_y" in message:
+            ball_x = message["ball_x"]
+            ball_y = message["ball_y"]
         if "score_left" in message:
             score_left = message["score_left"]
         if "score_right" in message:
             score_right = message["score_right"]
+
 def show_waiting_screen():
     waiting = True
     font = pygame.font.Font(None, 74)
@@ -76,8 +85,9 @@ def show_waiting_screen():
         pygame.display.flip()
         clock.tick(60)
     return True
+
 def main():
-    global paddle1_y, paddle2_y, ball_x, ball_y, ball_dx, ball_dy, game_started, role, score_left, score_right
+    global paddle1_y, paddle2_y, game_started, role, score_left, score_right
     if not show_waiting_screen():
         return
     running = True
@@ -94,28 +104,11 @@ def main():
         elif role == "right":
             pygame.draw.rect(screen, BLUE, (WIDTH - 30, paddle2_y, paddle_width, paddle_height))
             pygame.draw.rect(screen, RED, (20, paddle1_y, paddle_width, paddle_height))
+
+        # Vẽ bóng nhận từ server
         if game_started:
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius)
-            ball_x += ball_dx
-            ball_y += ball_dy
-            if ball_y - ball_radius <= 0 or ball_y + ball_radius >= HEIGHT:
-                ball_dy *= -1
-            if (20 <= ball_x <= 30 and paddle1_y <= ball_y <= paddle1_y + paddle_height) or (WIDTH - 30 <= ball_x <= WIDTH - 20 and paddle2_y <= ball_y <= paddle2_y + paddle_height):
-                ball_dx *= -1
-            if ball_x - ball_radius <= 0:
-                if HEIGHT // 2 - goal_height // 2 <= ball_y <= HEIGHT // 2 + goal_height // 2:
-                    score_right += 1
-                    client_socket.sendall(pickle.dumps({"score_left": score_left, "score_right": score_right}))
-                    reset_ball()
-                else:
-                    ball_dx *= -1
-            elif ball_x + ball_radius >= WIDTH:
-                if HEIGHT // 2 - goal_height // 2 <= ball_y <= HEIGHT // 2 + goal_height // 2:
-                    score_left += 1
-                    client_socket.sendall(pickle.dumps({"score_left": score_left, "score_right": score_right}))
-                    reset_ball()
-                else:
-                    ball_dx *= -1
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -138,10 +131,6 @@ def main():
         pygame.display.flip()
         clock.tick(60)
     pygame.quit()
-def reset_ball():
-    global ball_x, ball_y, ball_dx, ball_dy
-    ball_x, ball_y = WIDTH // 2, HEIGHT // 2
-    ball_dx *= -1
 
 if __name__ == "__main__":
     main()
