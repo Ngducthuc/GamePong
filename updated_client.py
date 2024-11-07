@@ -3,15 +3,18 @@ import socket
 import pickle
 import threading
 
-# Thông tin server
+# Server info
 SERVER_IP = '192.168.100.234'
 SERVER_PORT = 5555
 WIDTH, HEIGHT = 800, 600
+
+# Colors
+BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-BG_COLOR = (30, 30, 60)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
 ACCENT_COLOR = (100, 255, 100)
+
+# Game settings
 paddle_width, paddle_height = 10, 100
 ball_radius = 10
 goal_width = 10
@@ -23,13 +26,20 @@ paddle2_y = HEIGHT // 2
 ball_x, ball_y = WIDTH // 2, HEIGHT // 2
 role = None
 game_started = False
+
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Ping Pong Game")
 clock = pygame.time.Clock()
-
 connected = False
 client_socket = None
+
+# Load paddle images
+paddle_red_img = pygame.image.load('Ronaldo-Da-Phat.png').convert_alpha()
+paddle_blue_img = pygame.image.load('Lionel_Messi.png').convert_alpha()
+paddle_red_img = pygame.transform.scale(paddle_red_img, (paddle_width * 6.5, paddle_height*1.5))
+paddle_blue_img = pygame.transform.scale(paddle_blue_img, (paddle_width*6.5, paddle_height*1.5))
+
 
 def connect_to_server():
     global client_socket, connected
@@ -60,14 +70,31 @@ def receive_data():
         if "score_right" in message:
             score_right = message["score_right"]
 
+def draw_soccer_field():
+    # Fill the background with black
+    screen.fill(BLACK)
+    
+    # Field border
+    pygame.draw.rect(screen, GREEN, (20, 20, WIDTH - 40, HEIGHT - 40), 5)
+    
+    # Center circle
+    pygame.draw.circle(screen, GREEN, (WIDTH // 2, HEIGHT // 2), 50, 5)
+    
+    # Center line
+    pygame.draw.line(screen, GREEN, (WIDTH // 2, 20), (WIDTH // 2, HEIGHT - 20), 5)
+    
+    # Goal areas
+    pygame.draw.rect(screen, GREEN, (20, HEIGHT // 2 - goal_height // 2, 60, goal_height), 5)
+    pygame.draw.rect(screen, GREEN, (WIDTH - 80, HEIGHT // 2 - goal_height // 2, 60, goal_height), 5)
+
 def show_waiting_screen():
     waiting = True
     font = pygame.font.Font(None, 74)
     button_font = pygame.font.Font(None, 50)
-    button_text = button_font.render("Vào game", True, WHITE)
+    button_text = button_font.render("Join Game", True, WHITE)
     button_rect = button_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
     while waiting:
-        screen.fill(BG_COLOR)
+        draw_soccer_field()  # Draw soccer field background
         title_text = font.render("Ping Pong Game", True, ACCENT_COLOR)
         screen.blit(title_text, (WIDTH // 2 - title_text.get_width() // 2, HEIGHT // 2 - 100))
         pygame.draw.rect(screen, ACCENT_COLOR, button_rect.inflate(20, 20), border_radius=10)
@@ -80,6 +107,7 @@ def show_waiting_screen():
                 connect_to_server()
                 threading.Thread(target=receive_data, daemon=True).start()
                 waiting = False
+
         pygame.display.flip()
         clock.tick(60)
     return True
@@ -88,28 +116,34 @@ def main():
     global paddle1_y, paddle2_y, game_started, role, score_left, score_right
     if not show_waiting_screen():
         return
+
     running = True
     while running:
-        screen.fill(BG_COLOR)
-        pygame.draw.rect(screen, WHITE, (0, HEIGHT // 2 - goal_height // 2, goal_width, goal_height))
-        pygame.draw.rect(screen, WHITE, (WIDTH - goal_width, HEIGHT // 2 - goal_height // 2, goal_width, goal_height))
+        draw_soccer_field()  # Draw soccer field background
+
+        # Draw score
         font = pygame.font.Font(None, 74)
         score_text = font.render(f"{score_left} - {score_right}", True, WHITE)
         screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 10))
-        if role == "left":
-            pygame.draw.rect(screen, RED, (20, paddle1_y, paddle_width, paddle_height))
-            pygame.draw.rect(screen, BLUE, (WIDTH - 30, paddle2_y, paddle_width, paddle_height))
-        elif role == "right":
-            pygame.draw.rect(screen, BLUE, (WIDTH - 30, paddle2_y, paddle_width, paddle_height))
-            pygame.draw.rect(screen, RED, (20, paddle1_y, paddle_width, paddle_height))
 
-        # Vẽ bóng nhận từ server
+        # Draw paddles
+        if role == "left":
+            screen.blit(paddle_red_img, (20, paddle1_y))
+            screen.blit(paddle_blue_img, (WIDTH - 30, paddle2_y))
+        elif role == "right":
+            screen.blit(paddle_blue_img, (WIDTH - 30, paddle2_y))
+            screen.blit(paddle_red_img, (20, paddle1_y))
+
+        # Draw ball with glow effect
         if game_started:
+            glow_radius = 15
+            pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius + glow_radius, width=2)
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
         keys = pygame.key.get_pressed()
         if role == "left":
             if keys[pygame.K_w] and paddle1_y > 0:

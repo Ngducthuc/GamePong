@@ -3,29 +3,21 @@ import threading
 import pickle
 import time
 
-# Server IP and port
 HOST = '192.168.100.234'
 PORT = 5555
-
-# Game settings
 WIDTH, HEIGHT = 800, 600
 paddle_width, paddle_height = 10, 100
 ball_radius = 10
 goal_width = 10
 goal_height = HEIGHT // 3
-
-# Ball position and movement
 ball_x, ball_y = WIDTH // 2, HEIGHT // 2
 ball_dx, ball_dy = 5, 5
-
-# Score tracking
 score_left = 0
 score_right = 0
 
 paddle1_y = HEIGHT // 2
 paddle2_y = HEIGHT // 2
 
-# Initialize server
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.bind((HOST, PORT))
 server_socket.listen(2)
@@ -36,40 +28,33 @@ def broadcast_data(data):
     """Sends data to all connected clients."""
     for client in clients:
         client.sendall(pickle.dumps(data))
-
 def handle_ball_movement():
     """Handles ball movement, collision detection, and scoring."""
     global ball_x, ball_y, ball_dx, ball_dy, score_left, score_right
-
     while True:
-        # Update ball position
         ball_x += ball_dx
         ball_y += ball_dy
 
-        # Ball collision with top/bottom of the screen
         if ball_y - ball_radius <= 0 or ball_y + ball_radius >= HEIGHT:
             ball_dy *= -1
 
-        # Ball collision with paddles (check both paddles)
         if (20 <= ball_x <= 30 and paddle1_y <= ball_y <= paddle1_y + paddle_height) or \
            (WIDTH - 30 <= ball_x <= WIDTH - 20 and paddle2_y <= ball_y <= paddle2_y + paddle_height):
             ball_dx *= -1
 
-        # Scoring
-        if ball_x - ball_radius <= 0:  # Left goal
+        if ball_x - ball_radius <= 0:
             if HEIGHT // 2 - goal_height // 2 <= ball_y <= HEIGHT // 2 + goal_height // 2:
                 score_right += 1
                 reset_ball()
             else:
                 ball_dx *= -1
-        elif ball_x + ball_radius >= WIDTH:  # Right goal
+        elif ball_x + ball_radius >= WIDTH:
             if HEIGHT // 2 - goal_height // 2 <= ball_y <= HEIGHT // 2 + goal_height // 2:
                 score_left += 1
                 reset_ball()
             else:
                 ball_dx *= -1
 
-        # Broadcast ball and score data to all clients
         broadcast_data({
             "ball_x": ball_x,
             "ball_y": ball_y,
@@ -77,8 +62,7 @@ def handle_ball_movement():
             "score_right": score_right
         })
 
-        time.sleep(0.03)  # Control update frequency
-
+        time.sleep(0.03)
 def reset_ball():
     """Resets the ball to the center and reverses its direction."""
     global ball_x, ball_y, ball_dx
@@ -109,13 +93,11 @@ def handle_client(conn, addr):
                 break
             received_data = pickle.loads(data)
 
-            # Process paddle positions sent by clients
             if "paddle1_y" in received_data:
                 paddle1_y = received_data["paddle1_y"]
             elif "paddle2_y" in received_data:
                 paddle2_y = received_data["paddle2_y"]
 
-            # Relay paddle data to the other client
             for client in clients:
                 if client != conn:
                     client.sendall(pickle.dumps(received_data))
