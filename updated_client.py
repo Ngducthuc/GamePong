@@ -77,9 +77,8 @@ def show_waiting_screen():
         pygame.display.flip()
         clock.tick(60)
     return True
-
 def main():
-    global paddle1_y, paddle2_y, ball_x, ball_y, game_started, role, score_left, score_right
+    global paddle1_y, paddle2_y, ball_x, ball_y, ball_dx, ball_dy, game_started, role, score_left, score_right
     if not show_waiting_screen():
         return
     running = True
@@ -98,6 +97,26 @@ def main():
             pygame.draw.rect(screen, RED, (20, paddle1_y, paddle_width, paddle_height))
         if game_started:
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius)
+            ball_x += ball_dx
+            ball_y += ball_dy
+            if ball_y - ball_radius <= 0 or ball_y + ball_radius >= HEIGHT:
+                ball_dy *= -1
+            if (20 <= ball_x <= 30 and paddle1_y <= ball_y <= paddle1_y + paddle_height) or (WIDTH - 30 <= ball_x <= WIDTH - 20 and paddle2_y <= ball_y <= paddle2_y + paddle_height):
+                ball_dx *= -1
+            if ball_x - ball_radius <= 0:
+                if HEIGHT // 2 - goal_height // 2 <= ball_y <= HEIGHT // 2 + goal_height // 2:
+                    score_right += 1
+                    client_socket.sendall(pickle.dumps({"score_left": score_left, "score_right": score_right}))
+                    reset_ball()
+                else:
+                    ball_dx *= -1
+            elif ball_x + ball_radius >= WIDTH:
+                if HEIGHT // 2 - goal_height // 2 <= ball_y <= HEIGHT // 2 + goal_height // 2:
+                    score_left += 1
+                    client_socket.sendall(pickle.dumps({"score_left": score_left, "score_right": score_right}))
+                    reset_ball()
+                else:
+                    ball_dx *= -1
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -121,7 +140,6 @@ def main():
         clock.tick(60)
 
     pygame.quit()
-
 
 def reset_ball():
     global ball_x, ball_y, ball_dx, ball_dy
