@@ -101,7 +101,7 @@ time_remaining = 0
 ball_speed_x = 5
 ball_speed_y = 5
 def main():
-    global paddle1_y, paddle2_y, ball_x, ball_y, game_started, role, score_left, score_right, game_over, winner, time_remaining
+    global paddle1_y, paddle2_y, ball_x, ball_y, game_started, role, score_left, score_right, game_over, winner, time_remaining, ball_speed_x, ball_speed_y
     if not show_waiting_screen():
         return
 
