@@ -4,17 +4,13 @@ import pickle
 import threading
 
 # Server info
-SERVER_IP = '192.168.88.151'
+SERVER_IP = '192.168.100.234'
 SERVER_PORT = 5555
 WIDTH, HEIGHT = 800, 600
-
-# Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 ACCENT_COLOR = (100, 255, 100)
-
-# Game settings
 paddle_width, paddle_height = 10, 100
 ball_radius = 10
 goal_width = 10
@@ -35,21 +31,17 @@ clock = pygame.time.Clock()
 connected = False
 client_socket = None
 
-# Load paddle images
 paddle_red_img = pygame.image.load('Ronaldo-Da-Phat.png').convert_alpha()
 paddle_blue_img = pygame.image.load('Lionel_Messi.png').convert_alpha()
 paddle_red_img = pygame.transform.scale(paddle_red_img, (paddle_width * 6.5, paddle_height*1.5))
 paddle_blue_img = pygame.transform.scale(paddle_blue_img, (paddle_width*6.5, paddle_height*1.5))
-
-
 def connect_to_server():
     global client_socket, connected
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((SERVER_IP, SERVER_PORT))
     connected = True
-
 def receive_data():
-    global paddle1_y, paddle2_y, ball_x, ball_y, game_started, role, score_left, score_right
+    global paddle1_y, paddle2_y, ball_x, ball_y, game_started, role, score_left, score_right, time_remaining, game_over, winner
     while True:
         data = client_socket.recv(1024)
         if not data:
@@ -58,7 +50,7 @@ def receive_data():
         if "role" in message:
             role = message["role"]
         if "game_ready" in message and message["game_ready"]:
-            game_started = True  # Bắt đầu trò chơi khi server báo đã sẵn sàng
+            game_started = True
         if "paddle1_y" in message:
             paddle1_y = message["paddle1_y"]
         if "paddle2_y" in message:
@@ -70,6 +62,11 @@ def receive_data():
             score_left = message["score_left"]
         if "score_right" in message:
             score_right = message["score_right"]
+        if "time_remaining" in message:
+            time_remaining = message["time_remaining"]
+        if "game_over" in message:
+            game_over = message["game_over"]
+            winner = message.get("winner", "draw")
 
 def draw_soccer_field():
     # Fill the background with black
@@ -108,13 +105,12 @@ def show_waiting_screen():
         pygame.display.flip()
         clock.tick(60)
     return True
-
 def main():
-    global paddle1_y, paddle2_y, game_started, role, score_left, score_right, game_over, winner
+    global paddle1_y, paddle2_y, game_started, role, score_left, score_right, game_over, winner, time_remaining
     if not show_waiting_screen():
         return
 
-    # Wait until game start signal received from server
+    # Chờ đến khi nhận được tín hiệu bắt đầu game từ server
     while not game_started:
         draw_soccer_field()
         font = pygame.font.Font(None, 50)
@@ -123,14 +119,18 @@ def main():
         pygame.display.flip()
         clock.tick(60)
 
-    # Game loop
+    # Vòng lặp game
     running = True
     while running:
         draw_soccer_field()
         score_text = pygame.font.Font(None, 74).render(f"{score_left} - {score_right}", True, WHITE)
         screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 10))
-        
-        # Draw paddles (characters)
+
+        # Hiển thị thời gian đếm ngược
+        time_text = pygame.font.Font(None, 50).render(f"Time: {time_remaining}s", True, WHITE)
+        screen.blit(time_text, (WIDTH // 2 - time_text.get_width() // 2, 50))
+
+        # Vẽ thanh chắn và bóng
         if role == "left":
             screen.blit(paddle_red_img, (20, paddle1_y))
             screen.blit(paddle_blue_img, (WIDTH - 90, paddle2_y))
@@ -138,21 +138,23 @@ def main():
             screen.blit(paddle_blue_img, (WIDTH - 90, paddle2_y))
             screen.blit(paddle_red_img, (20, paddle1_y))
 
-        # Draw ball with glow effect
         if game_started and not game_over:
             glow_radius = 15
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius + glow_radius, width=2)
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius)
 
-        # Display Game Over screen if game is over
         if game_over:
             font = pygame.font.Font(None, 100)
-            winner_text = font.render(f"{winner.capitalize()} wins!", True, ACCENT_COLOR)
+            if winner == "draw":
+                winner_text = font.render("Draw!", True, ACCENT_COLOR)
+            else:
+                winner_text = font.render(f"{winner.capitalize()} wins!", True, ACCENT_COLOR)
             screen.blit(winner_text, (WIDTH // 2 - winner_text.get_width() // 2, HEIGHT // 2 - winner_text.get_height() // 2))
             pygame.display.flip()
-            pygame.time.delay(3000)  # Delay to show the Game Over message
+            pygame.time.delay(3000)
             running = False
 
+        # Điều khiển paddle và cập nhật
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -176,6 +178,7 @@ def main():
         pygame.display.flip()
         clock.tick(60)
     pygame.quit()
+
 
 if __name__ == "__main__":
     main()
