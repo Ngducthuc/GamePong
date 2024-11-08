@@ -4,7 +4,7 @@ import pickle
 import threading
 
 # Server info
-SERVER_IP = '192.168.100.234'
+SERVER_IP = '192.168.88.151'
 SERVER_PORT = 5555
 WIDTH, HEIGHT = 800, 600
 
@@ -26,6 +26,7 @@ paddle2_y = HEIGHT // 2
 ball_x, ball_y = WIDTH // 2, HEIGHT // 2
 role = None
 game_started = False
+game_over = False
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -56,8 +57,8 @@ def receive_data():
         message = pickle.loads(data)
         if "role" in message:
             role = message["role"]
-        if "start" in message:
-            game_started = True
+        if "game_ready" in message and message["game_ready"]:
+            game_started = True  # Bắt đầu trò chơi khi server báo đã sẵn sàng
         if "paddle1_y" in message:
             paddle1_y = message["paddle1_y"]
         if "paddle2_y" in message:
@@ -73,16 +74,12 @@ def receive_data():
 def draw_soccer_field():
     # Fill the background with black
     screen.fill(BLACK)
-    
     # Field border
-    pygame.draw.rect(screen, GREEN, (20, 20, WIDTH - 40, HEIGHT - 40), 5)
-    
+    pygame.draw.rect(screen, GREEN, (20, 20, WIDTH - 40, HEIGHT - 40), 5) 
     # Center circle
-    pygame.draw.circle(screen, GREEN, (WIDTH // 2, HEIGHT // 2), 50, 5)
-    
+    pygame.draw.circle(screen, GREEN, (WIDTH // 2, HEIGHT // 2), 50, 5)  
     # Center line
     pygame.draw.line(screen, GREEN, (WIDTH // 2, 20), (WIDTH // 2, HEIGHT - 20), 5)
-    
     # Goal areas
     pygame.draw.rect(screen, GREEN, (20, HEIGHT // 2 - goal_height // 2, 60, goal_height), 5)
     pygame.draw.rect(screen, GREEN, (WIDTH - 80, HEIGHT // 2 - goal_height // 2, 60, goal_height), 5)
@@ -113,32 +110,48 @@ def show_waiting_screen():
     return True
 
 def main():
-    global paddle1_y, paddle2_y, game_started, role, score_left, score_right
+    global paddle1_y, paddle2_y, game_started, role, score_left, score_right, game_over, winner
     if not show_waiting_screen():
         return
 
+    # Wait until game start signal received from server
+    while not game_started:
+        draw_soccer_field()
+        font = pygame.font.Font(None, 50)
+        waiting_text = font.render("Waiting for another player...", True, WHITE)
+        screen.blit(waiting_text, (WIDTH // 2 - waiting_text.get_width() // 2, HEIGHT // 2))
+        pygame.display.flip()
+        clock.tick(60)
+
+    # Game loop
     running = True
     while running:
-        draw_soccer_field()  # Draw soccer field background
-
-        # Draw score
-        font = pygame.font.Font(None, 74)
-        score_text = font.render(f"{score_left} - {score_right}", True, WHITE)
+        draw_soccer_field()
+        score_text = pygame.font.Font(None, 74).render(f"{score_left} - {score_right}", True, WHITE)
         screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 10))
-
-        # Draw paddles
+        
+        # Draw paddles (characters)
         if role == "left":
             screen.blit(paddle_red_img, (20, paddle1_y))
-            screen.blit(paddle_blue_img, (WIDTH - 30, paddle2_y))
+            screen.blit(paddle_blue_img, (WIDTH - 90, paddle2_y))
         elif role == "right":
-            screen.blit(paddle_blue_img, (WIDTH - 30, paddle2_y))
+            screen.blit(paddle_blue_img, (WIDTH - 90, paddle2_y))
             screen.blit(paddle_red_img, (20, paddle1_y))
 
         # Draw ball with glow effect
-        if game_started:
+        if game_started and not game_over:
             glow_radius = 15
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius + glow_radius, width=2)
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius)
+
+        # Display Game Over screen if game is over
+        if game_over:
+            font = pygame.font.Font(None, 100)
+            winner_text = font.render(f"{winner.capitalize()} wins!", True, ACCENT_COLOR)
+            screen.blit(winner_text, (WIDTH // 2 - winner_text.get_width() // 2, HEIGHT // 2 - winner_text.get_height() // 2))
+            pygame.display.flip()
+            pygame.time.delay(3000)  # Delay to show the Game Over message
+            running = False
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
