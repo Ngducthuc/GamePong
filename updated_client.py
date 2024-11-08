@@ -2,6 +2,7 @@ import pygame
 import socket
 import pickle
 import threading
+import datetime
 
 # Server info
 SERVER_IP = '192.168.100.234'
@@ -35,6 +36,15 @@ paddle_red_img = pygame.image.load('Ronaldo-Da-Phat.png').convert_alpha()
 paddle_blue_img = pygame.image.load('Lionel_Messi.png').convert_alpha()
 paddle_red_img = pygame.transform.scale(paddle_red_img, (paddle_width * 6.5, paddle_height*1.5))
 paddle_blue_img = pygame.transform.scale(paddle_blue_img, (paddle_width*6.5, paddle_height*1.5))
+def save_score(score_left, score_right, winner):
+    # Lưu điểm vào file text
+    with open("scores.txt", "a") as file:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        file.write(f"Date: {timestamp}\n")
+        file.write(f"Score - Left Player: {score_left}, Right Player: {score_right}\n")
+        file.write(f"Winner: {winner}\n")
+        file.write("="*30 + "\n")
+    print("Score saved to scores.txt")
 def connect_to_server():
     global client_socket, connected
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -159,6 +169,7 @@ def main():
             screen.blit(winner_text, (WIDTH // 2 - winner_text.get_width() // 2, HEIGHT // 2 - winner_text.get_height() // 2))
             pygame.display.flip()
             pygame.time.delay(3000)
+            save_score(score_left, score_right, winner)
             running = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:

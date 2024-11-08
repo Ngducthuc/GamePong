@@ -2,7 +2,7 @@ import socket
 import threading
 import pickle
 import time
-HOST = '192.168.88.151'
+HOST = '192.168.100.234'
 PORT = 5555
 WIDTH, HEIGHT = 800, 600
 paddle_width, paddle_height = 10, 100
