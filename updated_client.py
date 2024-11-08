@@ -67,20 +67,13 @@ def receive_data():
         if "game_over" in message:
             game_over = message["game_over"]
             winner = message.get("winner", "draw")
-
 def draw_soccer_field():
-    # Fill the background with black
     screen.fill(BLACK)
-    # Field border
     pygame.draw.rect(screen, GREEN, (20, 20, WIDTH - 40, HEIGHT - 40), 5) 
-    # Center circle
     pygame.draw.circle(screen, GREEN, (WIDTH // 2, HEIGHT // 2), 50, 5)  
-    # Center line
     pygame.draw.line(screen, GREEN, (WIDTH // 2, 20), (WIDTH // 2, HEIGHT - 20), 5)
-    # Goal areas
     pygame.draw.rect(screen, GREEN, (20, HEIGHT // 2 - goal_height // 2, 60, goal_height), 5)
     pygame.draw.rect(screen, GREEN, (WIDTH - 80, HEIGHT // 2 - goal_height // 2, 60, goal_height), 5)
-
 def show_waiting_screen():
     waiting = True
     font = pygame.font.Font(None, 74)
@@ -101,12 +94,14 @@ def show_waiting_screen():
                 connect_to_server()
                 threading.Thread(target=receive_data, daemon=True).start()
                 waiting = False
-
         pygame.display.flip()
         clock.tick(60)
     return True
+time_remaining = 0
+ball_speed_x = 5
+ball_speed_y = 5
 def main():
-    global paddle1_y, paddle2_y, game_started, role, score_left, score_right, game_over, winner, time_remaining
+    global paddle1_y, paddle2_y, ball_x, ball_y, game_started, role, score_left, score_right, game_over, winner, time_remaining
     if not show_waiting_screen():
         return
 
@@ -125,24 +120,36 @@ def main():
         draw_soccer_field()
         score_text = pygame.font.Font(None, 74).render(f"{score_left} - {score_right}", True, WHITE)
         screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 10))
-
-        # Hiển thị thời gian đếm ngược
         time_text = pygame.font.Font(None, 50).render(f"Time: {time_remaining}s", True, WHITE)
         screen.blit(time_text, (WIDTH // 2 - time_text.get_width() // 2, 50))
-
-        # Vẽ thanh chắn và bóng
         if role == "left":
             screen.blit(paddle_red_img, (20, paddle1_y))
             screen.blit(paddle_blue_img, (WIDTH - 90, paddle2_y))
         elif role == "right":
             screen.blit(paddle_blue_img, (WIDTH - 90, paddle2_y))
             screen.blit(paddle_red_img, (20, paddle1_y))
-
+        ball_x += ball_speed_x
+        ball_y += ball_speed_y
+        if ball_y - ball_radius <= 0 or ball_y + ball_radius >= HEIGHT:
+            ball_speed_y *= -1  # Đổi hướng theo trục y
+        if (ball_x - ball_radius <= 20 + paddle_width and
+            paddle1_y < ball_y < paddle1_y + paddle_height):
+            ball_speed_x *= -1
+        if (ball_x + ball_radius >= WIDTH - 90 and
+            paddle2_y < ball_y < paddle2_y + paddle_height):
+            ball_speed_x *= -1
+        if ball_x < 0:
+            score_right += 1
+            ball_x, ball_y = WIDTH // 2, HEIGHT // 2
+            ball_speed_x *= -1
+        elif ball_x > WIDTH:
+            score_left += 1
+            ball_x, ball_y = WIDTH // 2, HEIGHT // 2
+            ball_speed_x *= -1
         if game_started and not game_over:
             glow_radius = 15
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius + glow_radius, width=2)
             pygame.draw.circle(screen, WHITE, (ball_x, ball_y), ball_radius)
-
         if game_over:
             font = pygame.font.Font(None, 100)
             if winner == "draw":
@@ -153,12 +160,9 @@ def main():
             pygame.display.flip()
             pygame.time.delay(3000)
             running = False
-
-        # Điều khiển paddle và cập nhật
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-
         keys = pygame.key.get_pressed()
         if role == "left":
             if keys[pygame.K_w] and paddle1_y > 0:
@@ -174,11 +178,8 @@ def main():
             if keys[pygame.K_DOWN] and paddle2_y < HEIGHT - paddle_height:
                 paddle2_y += 5
                 client_socket.sendall(pickle.dumps({"paddle2_y": paddle2_y}))
-
         pygame.display.flip()
         clock.tick(60)
     pygame.quit()
-
-
 if __name__ == "__main__":
     main()

@@ -27,31 +27,24 @@ def broadcast_data(data):
         client.sendall(pickle.dumps(data))
 def handle_ball_movement():
     global ball_x, ball_y, ball_dx, ball_dy, score_left, score_right, game_over, start_time
-    start_time = time.time()  # Đặt thời gian bắt đầu khi game sẵn sàng
+    start_time = time.time()
     while True:
         if is_game_ready and not game_over:
             current_time = time.time()
             elapsed_time = current_time - start_time
-            time_remaining = max(0, game_duration - int(elapsed_time))  # Tính thời gian còn lại
-
+            time_remaining = max(0, game_duration - int(elapsed_time))
             if elapsed_time >= game_duration:
                 game_over = True
-                # Kiểm tra ai có điểm cao hơn để xác định người chiến thắng
                 winner = "left" if score_left > score_right else "right" if score_right > score_left else "draw"
                 broadcast_data({"game_over": True, "winner": winner, "time_remaining": 0})
                 break
-            
-            # Cập nhật vị trí bóng và logic khác
             ball_x += ball_dx
             ball_y += ball_dy
-
             if ball_y - ball_radius <= 0 or ball_y + ball_radius >= HEIGHT:
                 ball_dy *= -1
-
             if (20 <= ball_x <= 30 and paddle1_y <= ball_y <= paddle1_y + paddle_height) or \
                (WIDTH - 30 <= ball_x <= WIDTH - 20 and paddle2_y <= ball_y <= paddle2_y + paddle_height):
                 ball_dx *= -1
-
             if ball_x - ball_radius <= 0:
                 if HEIGHT // 2 - goal_height // 2 <= ball_y <= HEIGHT // 2 + goal_height // 2:
                     score_right += 1
@@ -64,8 +57,6 @@ def handle_ball_movement():
                     reset_ball()
                 else:
                     ball_dx *= -1
-
-            # Phát thông tin cho client, bao gồm thời gian còn lại
             broadcast_data({
                 "ball_x": ball_x,
                 "ball_y": ball_y,
@@ -75,15 +66,13 @@ def handle_ball_movement():
             })
 
         time.sleep(0.03)
-
-# Biến toàn cục
 start_time = None
-game_duration = 120  # 120 giây, tương đương 2 phút
+game_duration = 120
 def check_game_over():
     global game_over
     if score_left >= 10 or score_right >= 10:
         game_over = True
-        broadcast_data({"game_over": True, "winner": "left" if score_left >= 10 else "right"})
+        broadcast_data({"game_over": True, "winner": "Ronaldo" if score_left >= 10 else "Messi"})
 def check_game_ready():
     global is_game_ready
     if len(clients) == 2:
